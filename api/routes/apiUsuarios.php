@@ -281,8 +281,13 @@ function procesarImagenUsuario()
 function inicioSesion()
 {
   try {
-    $email = $_POST['email'];
-    $constrasena = $_POST['pass'];
+	$email = strtolower(trim((string) ($_POST['email'] ?? '')));
+	$constrasena = (string) ($_POST['pass'] ?? '');
+	if ($email === '' || $constrasena === '') {
+		http_response_code(422);
+		echo json_encode(['error' => 'Usuario y contraseña son obligatorios.']);
+		return;
+	}
     $admin = new AdministradorUsuario();
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $idFallido = $admin->existeUsuario($email);

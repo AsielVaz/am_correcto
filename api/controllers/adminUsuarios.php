@@ -86,7 +86,16 @@ class AdministradorUsuario extends conector
             return $inactive;
         }
         if ($legacyValid || password_needs_rehash($hash, PASSWORD_DEFAULT)) {
-            $this->preparar('UPDATE usuario SET contrasena = ? WHERE id = ?', [password_hash((string) $pass, PASSWORD_DEFAULT), (int) $row['id']], 'si');
+			try {
+				$this->preparar(
+					'UPDATE usuario SET contrasena = ? WHERE id = ?',
+					[password_hash((string) $pass, PASSWORD_DEFAULT), (int) $row['id']],
+					'si'
+				);
+			} catch (Throwable $exception) {
+				// La migración del hash es progresiva y nunca debe invalidar un acceso ya verificado.
+				error_log('Password rehash deferred for user ' . (int) $row['id'] . ': ' . $exception->getMessage());
+			}
         }
         return $this->hidratar($row);
     }

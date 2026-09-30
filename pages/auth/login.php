@@ -29,11 +29,11 @@ include "../../components/main2.php";
                             <div class="text-center">
                                 <div class="mx-auto mb-4 text-center auth-logo">
                                     <a href="<?php echo url('/'); ?>" class="logo-dark">
-                                        <img src="../../assets/images/logos/Logo-Codigo-Chips.png" style="height: 100px;" alt="logo dark">
+										<img src="<?php echo assetsUrl('images/logos/Logo-Codigo-Chips.png'); ?>" style="height: 100px;" alt="logo dark">
                                     </a>
 
                                     <a href="<?php echo url('/'); ?>" class="logo-light">
-                                        <img src="../../assets/images/logos/Logo-Codigo-Chips-Invertido.png" style="height: 100px;" alt="logo light">
+										<img src="<?php echo assetsUrl('images/logos/Logo-Codigo-Chips-Invertido.png'); ?>" style="height: 100px;" alt="logo light">
                                     </a>
                                 </div>
                                 <h4 class="fw-bold text-dark mb-2">Bienvenido!</h4>
@@ -61,21 +61,40 @@ include "../../components/main2.php";
                             // Manejo de login con fetch
                             const loginForm = document.getElementById('loginForm');
                             const loginError = document.getElementById('loginError');
+							const loginButton = loginForm.querySelector('button[type="submit"]');
+							const loginApiUrl = <?php echo json_encode(url('api/routes/apiUsuarios.php'), JSON_UNESCAPED_SLASHES); ?>;
                             loginForm.addEventListener('submit', async function(e) {
                                 e.preventDefault();
                                 loginError.classList.add('d-none');
                                 const username = document.getElementById('user').value.trim();
                                 const password = document.getElementById('password').value;
+								if (!username || !password) {
+									loginError.textContent = 'Ingresa tu usuario y contraseña.';
+									loginError.classList.remove('d-none');
+									return;
+								}
+								const originalButtonContent = loginButton.innerHTML;
+								loginButton.disabled = true;
+								loginButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Ingresando...';
                                 try {
                                     const formData = new FormData();
                                     formData.append('accion', 'inicio');
                                     formData.append('email', username);
                                     formData.append('pass', password);
-                                    const response = await fetch('../../api/routes/apiUsuarios.php', {
+									const response = await fetch(loginApiUrl, {
                                         method: 'POST',
                                         body: formData
                                     });
-                                    const data = await response.json();
+									const responseText = await response.text();
+									let data;
+									try {
+										data = responseText ? JSON.parse(responseText) : {};
+									} catch (_) {
+										throw new Error('El servidor devolvió una respuesta inválida.');
+									}
+									if (!response.ok) {
+										throw new Error(data.error || 'No fue posible iniciar sesión.');
+									}
                                     if (data && data.token) {
                                         // Guardar token y expiración en localStorage
                                         sessionStorage.setItem('token', data.token);
@@ -96,8 +115,11 @@ include "../../components/main2.php";
                                         loginError.classList.remove('d-none');
                                     }
                                 } catch (err) {
-                                    loginError.textContent = 'Error de conexión con el servidor';
+									loginError.textContent = err.message || 'Error de conexión con el servidor';
                                     loginError.classList.remove('d-none');
+								} finally {
+									loginButton.disabled = false;
+									loginButton.innerHTML = originalButtonContent;
                                 }
                             });
                         </script>

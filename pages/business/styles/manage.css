@@ -1,0 +1,139 @@
+/* Razón social: una línea, elipsis y tooltip */
+.razon-social-ellipsis {
+	display: inline-block;
+	max-width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: middle;
+	cursor: pointer;
+}
+/* ========================================
+   Estilos para la página de administrar empresas
+   ======================================== */
+
+/* Animación para elementos con efecto de pulso (urgente) */
+.pulse-red {
+	animation: pulse 2s infinite;
+	border-radius: 100%;
+}
+
+@keyframes pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+	}
+	70% {
+		box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+	}
+}
+
+.companies-table-wrapper {
+	border-radius: var(--bs-border-radius-lg, 0.75em);
+	border: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.075));
+	overflow: hidden;
+	padding: 0.5em;
+}
+
+.companies-table-wrapper .table-responsive {
+	max-height: 70vh;
+}
+
+.companies-table-wrapper table {
+	min-width: 1280px;
+}
+
+.companies-table-head {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	backdrop-filter: blur(6px);
+}
+
+.companies-table-head th {
+	border: 0;
+	padding: 1.5em 0.9em;
+}
+
+.companies-table-head .heading-label {
+	font-size: 0.85em;
+	letter-spacing: 0.005em;
+	font-weight: 500;
+	display: block;
+	text-align: center;
+	white-space: normal;
+	line-height: 1.3;
+	word-break: break-word;
+}
+
+.companies-table-wrapper tbody tr:hover {
+	background-color: var(--bs-table-hover-bg, rgba(0, 0, 0, 0.075));
+}
+
+.companies-table-wrapper tbody td {
+	border-color: var(--bs-border-color-translucent, rgba(0, 0, 0, 0.075));
+}
+
+/* Centrar todas las celdas que muestran estados (íconos y badges) */
+.companies-table-wrapper tbody td:has(.estado-link),
+.companies-table-wrapper tbody td:has(.estado-wrapper),
+.companies-table-wrapper tbody td:has(.estado-icono) {
+	text-align: center;
+	vertical-align: middle;
+}
+
+.companies-table-wrapper .loading-text {
+	padding: 2.5em 0;
+	font-size: 0.95em;
+}
+
+@media (max-width: 1400px) {
+	.companies-table-wrapper table {
+		min-width: 1100px;
+	}
+}
+
+.action-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.25em;
+	height: 2.25em;
+	min-width: 2.25em;
+	border-radius: 50%;
+	padding: 0;
+	line-height: 1;
+}
+
+.action-icon-btn i {
+	display: block;
+	font-size: 1.05em;
+	line-height: 1;
+}
+
+/* Columna sticky: Razón social */
+.companies-table-wrapper .sticky-col {
+	position: sticky;
+	z-index: 8; /* por debajo del thead (10) pero encima de celdas normales */
+	backdrop-filter: blur(10px);
+	left: 0; /* pegar al borde izquierdo */
+	/* separador visual a la derecha */
+	box-shadow: 4px 0 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Truncar razón social a 2 líneas con puntos suspensivos */
+.razon-truncate {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	line-clamp: 2;
+	box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: normal !important;
+	max-width: 200px;
+	min-width: 200px;
+	height: 40px;
+}

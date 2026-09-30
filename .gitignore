@@ -1,0 +1,6 @@
+/.env
+/Documentos/
+/storage/logs/*.log
+/Imagenes/Usuarios/*
+!/Imagenes/Usuarios/.gitkeep
+

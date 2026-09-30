@@ -2,14 +2,22 @@
 
 Aplicación administrativa PHP compatible con los módulos del sistema `dev`: autenticación, roles, usuarios, empresas, información fiscal y bancaria, documentos, notificaciones, proyectos, servicios y tareas.
 
-## Acceso local
+## Acceso
 
-- URL: `http://localhost/am/new/`
+- Producción: `https://codigoychips.com/am-cr/`
 - PHP: 8.2 o superior
 - Base de datos: MySQL `am_dev`
 - Configuración local: `.env`
 
 El archivo `.env` contiene las credenciales locales y está excluido de Git. Para otra instalación se debe copiar `.env.example` como `.env` y completar las variables.
+
+## Publicación en producción
+
+- Copiar el contenido de este directorio directamente al directorio público `am-cr`; no crear una carpeta `new` dentro de él.
+- La aplicación debe quedar accesible en `https://codigoychips.com/am-cr/` y `APP_URL` debe conservar ese mismo valor.
+- Como `.env` está excluido de Git, debe crearse o copiarse manualmente en la raíz de `am-cr` con las credenciales reales del servidor.
+- Como `Documentos` está excluido de Git, sus ZIP deben extraerse en la raíz de `am-cr`, de modo que exista `am-cr/Documentos`.
+- El archivo `.htaccess` debe subirse junto con el resto del contenido para proteger secretos y desactivar la ejecución de PHP dentro de archivos cargados.
 
 ## Arquitectura
 
@@ -33,7 +41,7 @@ El archivo `.env` contiene las credenciales locales y está excluido de Git. Par
 - Roles `Usuario`, `Capturista` y `Admin` conservados.
 - Sesión del frontend en `sessionStorage`, migración transparente desde el almacenamiento anterior y cierre únicamente ante respuestas 401.
 - Cabeceras HTTP de seguridad, bloqueo de listados y bloqueo de ejecución PHP en carpetas de archivos.
-- Rutas compatibles tanto con `/am/new` como con una instalación bajo otro prefijo configurable.
+- Rutas configuradas para `/am-cr` y autodetección del prefijo cuando `APP_URL` no está disponible.
 - Resolución automática de URLs heredadas de `Documentos` e `Imagenes`.
 - Cargas apuntando al directorio de la aplicación, nombres saneados con `basename` y permisos de archivo restringidos.
 - Procesos programados y correo configurables desde `.env`.

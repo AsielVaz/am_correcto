@@ -13,14 +13,33 @@ function appBasePath(): string
     }
 
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-    $marker = '/new/';
-    $position = strpos($script, $marker);
-    return $position === false ? '' : substr($script, 0, $position + strlen('/new'));
+	foreach (['/pages/', '/api/', '/components/'] as $marker) {
+		$position = strpos($script, $marker);
+		if ($position !== false) {
+			return rtrim(substr($script, 0, $position), '/');
+		}
+	}
+
+	$directory = str_replace('\\', '/', dirname($script));
+	return $directory === '/' || $directory === '.' ? '' : rtrim($directory, '/');
 }
 
 function url(string $path = ''): string
 {
     return rtrim(appBasePath(), '/') . '/' . ltrim($path, '/');
+}
+
+function absoluteUrl(string $path = ''): string
+{
+	$configuredUrl = trim((string) env('APP_URL', ''));
+	if ($configuredUrl !== '') {
+		return rtrim($configuredUrl, '/') . '/' . ltrim($path, '/');
+	}
+
+	$https = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+	$scheme = $https ? 'https' : 'http';
+	$host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+	return $scheme . '://' . $host . url($path);
 }
 
 function assetsUrl(string $path): string

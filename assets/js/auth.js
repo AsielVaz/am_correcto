@@ -1,10 +1,13 @@
 // Verifica el token JWT y protege las páginas del frontend
 (function () {
 	// Páginas que no requieren autenticación
-	const appBase = document.querySelector('meta[name="app-base"]')?.content || '/am/new';
+	const currentPath = window.location.pathname;
+	const pagesPosition = currentPath.indexOf('/pages/');
+	const detectedBase = pagesPosition >= 0 ? currentPath.slice(0, pagesPosition) : currentPath.replace(/\/[^/]*$/, '');
+	const appBase = document.querySelector('meta[name="app-base"]')?.content || detectedBase || '/am-cr';
 	const publicPages = [appBase, appBase + '/', appBase + '/index.php', appBase + '/pages/auth/login.php', appBase + '/pages/auth/logout.php'];
-	const currentPath = window.location.pathname.toLowerCase();
-	if (publicPages.some((p) => currentPath === p.toLowerCase())) return;
+	const normalizedCurrentPath = window.location.pathname.toLowerCase();
+	if (publicPages.some((p) => normalizedCurrentPath === p.toLowerCase())) return;
 
 	const session = window.sessionStorage;
 	if (!session.getItem('token') && localStorage.getItem('token')) {

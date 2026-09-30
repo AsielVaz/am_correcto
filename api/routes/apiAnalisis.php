@@ -4,6 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../config/conectorBD.php';
 require_once __DIR__ . '/../utils/encriptador.php';
+require_once dirname(__DIR__, 2) . '/utils/routes.php';
 
 // Validar API Key exclusiva para n8n
 $config = require __DIR__ . '/../config/apikey_n8n.php';
@@ -78,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $con->ejecutar($updateToken);
     }
 
-    // Crear carpeta Analisis/token en la ruta física absoluta
-    $analisisDir = '/var/www/efficientdat_usr/data/www/efficientdata.mx/am/Documentos/DocumentosPermanentes/Analisis';
+	// Crear carpeta Analisis/token dentro de la instalación actual.
+	$analisisDir = appFilesystemPath('/Documentos/DocumentosPermanentes/Analisis');
     if (!is_dir($analisisDir)) {
         mkdir($analisisDir, 0777, true);
     }
@@ -88,11 +89,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         mkdir($tokenDir, 0777, true);
     }
 
-    // URL pública de la carpeta de análisis
-    $carpetaAnalisisUrl = 'https://am.efficientdata.mx/Documentos/DocumentosPermanentes/Analisis/' . $token;
-
-    // Agregar la URL base a rutaDocumento
-    $rutaDocumentoUrl = 'https://am.efficientdata.mx' . str_replace(APP_ROOT, '', $rutaDocumento);
+	// URLs públicas basadas en APP_URL, sin depender del servidor anterior.
+	$carpetaAnalisisUrl = absoluteUrl('Documentos/DocumentosPermanentes/Analisis/' . rawurlencode($token));
+	$rutaNormalizada = str_replace('\\', '/', (string) $rutaDocumento);
+	$rootNormalizado = rtrim(str_replace('\\', '/', APP_ROOT), '/');
+	if (str_starts_with($rutaNormalizada, $rootNormalizado)) {
+		$rutaNormalizada = substr($rutaNormalizada, strlen($rootNormalizado));
+	}
+	$rutaDocumentoUrl = absoluteUrl(ltrim($rutaNormalizada, '/'));
 
     // Respuesta
     echo json_encode([

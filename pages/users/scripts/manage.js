@@ -4,7 +4,11 @@ let pagePermissions = window.appPermissions || {
 	isAdmin: false,
 };
 let adminPageInitialized = false;
-const fallbackManageUrl = (document.querySelector('meta[name="app-base"]')?.content || '/am/new') + '/pages/business/manage.php';
+const detectedAppBase = window.location.pathname.includes('/pages/')
+	? window.location.pathname.slice(0, window.location.pathname.indexOf('/pages/'))
+	: '/am-cr';
+const fallbackManageUrl =
+	(document.querySelector('meta[name="app-base"]')?.content || detectedAppBase) + '/pages/business/manage.php';
 let currentUsers = [];
 let currentPage = 1;
 let editHandlersBound = false;

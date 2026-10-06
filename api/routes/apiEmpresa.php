@@ -164,10 +164,23 @@ class Aviso
     }
 }
 
+function prepararDirectorioCarga(string $rutaRelativa): ?string
+{
+    $rutaAbsoluta = appFilesystemPath($rutaRelativa);
+    if (!is_dir($rutaAbsoluta) && !@mkdir($rutaAbsoluta, 0750, true) && !is_dir($rutaAbsoluta)) {
+        error_log('No se pudo crear el directorio de carga: ' . $rutaAbsoluta);
+        return null;
+    }
+
+    return rtrim($rutaAbsoluta, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+}
+
 function procesarImagen($id)
 {
+	if (!isset($_FILES['archivo']) || ($_FILES['archivo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
 
     $carpetaDestino = '/Imagenes/Empresas/';
+	if (prepararDirectorioCarga($carpetaDestino) === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['archivo']['name']);
@@ -205,7 +218,9 @@ function procesarImagen($id)
 
 function procesarPdf($id)
 {
-    $carpetaDestino = APP_ROOT . '/Documentos/Pdf/';
+	if (!isset($_FILES['pdf']) || ($_FILES['pdf']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	$carpetaDestino = prepararDirectorioCarga('/Documentos/Pdf/');
+	if ($carpetaDestino === null) return "0";
     $nombre_imagen = basename($_FILES['pdf']['name']);
     $tipo_imagen = $_FILES['pdf']['type'];
     // Verificar si el archivo se subió correctamente
@@ -234,7 +249,9 @@ function procesarPdf($id)
 
 function procesarConstanciaSf($id)
 {
-    $carpetaDestino = APP_ROOT . '/Documentos/Constancias/';
+	if (!isset($_FILES['CSF']) || ($_FILES['CSF']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	$carpetaDestino = prepararDirectorioCarga('/Documentos/Constancias/');
+	if ($carpetaDestino === null) return "0";
     $nombre_imagen = basename($_FILES['CSF']['name']);
     $tipo_imagen = $_FILES['CSF']['type'];
     if (!is_uploaded_file($_FILES['CSF']['tmp_name'])) {
@@ -256,7 +273,9 @@ function procesarConstanciaSf($id)
 
 function procesarConstanciaPfx($id)
 {
+	if (!isset($_FILES['archivo']) || ($_FILES['archivo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
     $carpetaDestino = '/Documentos/Constancias/';
+	if (prepararDirectorioCarga($carpetaDestino) === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['archivo']['name']);
@@ -284,7 +303,9 @@ function procesarConstanciaPfx($id)
 
 function procesarArchivo($id)
 {
-    $carpetaDestino = APP_ROOT . '/Documentos/Comprobantes/';
+	if (!isset($_FILES['comprobante']) || ($_FILES['comprobante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	$carpetaDestino = prepararDirectorioCarga('/Documentos/Comprobantes/');
+	if ($carpetaDestino === null) return "0";
     $nombre_imagen = basename($_FILES['comprobante']['name']);
     $tipo_imagen = $_FILES['comprobante']['type'];
     //$tamanio_imagen = $_FILES['comprobante']['size'];
@@ -319,7 +340,9 @@ function procesarArchivo($id)
 
 function procesarActas($id)
 {
+	if (!isset($_FILES['acta']) || ($_FILES['acta']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
     $carpetaDestino = '/Documentos/Actas/';
+	if (prepararDirectorioCarga($carpetaDestino) === null) return "0";
     $pesoMaxicoImagen = 2000000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['acta']['name']);
@@ -413,7 +436,10 @@ function procesarDocumentoPermanente($id)
 
 function procesarEstadosCuenta($id)
 {
-    $carpetaDestino = APP_ROOT . '/Documentos/Estados/';
+	if (!isset($_FILES['estado']) || ($_FILES['estado']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	$carpetaRelativa = '/Documentos/Estados/';
+	$carpetaDestino = prepararDirectorioCarga($carpetaRelativa);
+	if ($carpetaDestino === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['estado']['name']); 
@@ -428,18 +454,18 @@ function procesarEstadosCuenta($id)
     if ($tamanio_imagen < $pesoMaxicoImagen) {
 
         //mueve la imagen a la carpeta seleccionada
-        move_uploaded_file($_FILES['estado']['tmp_name'], ''. $carpetaDestino . $nombre_imagen);
+        if (!move_uploaded_file($_FILES['estado']['tmp_name'], $carpetaDestino . $nombre_imagen)) return "0";
         // dar permisos de lectura y escritura
-        chmod(appFilesystemPath($carpetaDestino . $nombre_imagen), 0640);
+		@chmod($carpetaDestino . $nombre_imagen, 0640);
         // renombrar el archivo con la id del usuario, la fecha y hora actual y el tipo de archivo
         $nombreCompuestoImagen = $carpetaDestino . "Documento-" . $id . "-" . date("Y-m-d-H-i-s") . "." . procesarFormatos($tipo_Imgaen);
         // rename renombra el archivo
-        rename('' . $carpetaDestino . $nombre_imagen, '' . $nombreCompuestoImagen);
+		if (!rename($carpetaDestino . $nombre_imagen, $nombreCompuestoImagen)) return "0";
         // dar permisos de lectura y escritura
-        chmod('' . $nombreCompuestoImagen, 0640);
+		@chmod($nombreCompuestoImagen, 0640);
         // unlink elimina el archivo
 
-        return '/Documentos/Estados/' . "Documento-" . $id . "-" . date("Y-m-d-H-i-s") . "." . procesarFormatos($tipo_Imgaen);
+		return $carpetaRelativa . basename($nombreCompuestoImagen);
     } else {
         return "0";
     }
@@ -449,7 +475,10 @@ function procesarEstadosCuenta($id)
 
 function procesarCaratulas($id)
 {
-    $carpetaDestino = '/Documentos/Caratulas/';
+	if (!isset($_FILES['caratula']) || ($_FILES['caratula']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	$carpetaRelativa = '/Documentos/Caratulas/';
+	$carpetaDestino = prepararDirectorioCarga($carpetaRelativa);
+	if ($carpetaDestino === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['caratula']['name']);
@@ -464,18 +493,18 @@ function procesarCaratulas($id)
     if ($tamanio_imagen < $pesoMaxicoImagen) {
 
         //mueve la imagen a la carpeta seleccionada
-        move_uploaded_file($_FILES['caratula']['tmp_name'], APP_ROOT . $carpetaDestino . $nombre_imagen);
+		if (!move_uploaded_file($_FILES['caratula']['tmp_name'], $carpetaDestino . $nombre_imagen)) return "0";
         // dar permisos de lectura y escritura
-        chmod(appFilesystemPath($carpetaDestino . $nombre_imagen), 0640);
+		@chmod($carpetaDestino . $nombre_imagen, 0640);
         // renombrar el archivo con la id del usuario, la fecha y hora actual y el tipo de archivo
-        $nombreCompuestoImagen = $carpetaDestino . "Documento-" . $id . "-" . date("Y-m-d-H-i-s") . "." . procesarFormatos($tipo_Imgaen);
+		$nombreCompuestoImagen = $carpetaDestino . "Documento-" . $id . "-" . date("Y-m-d-H-i-s") . "." . procesarFormatos($tipo_Imgaen);
         // rename renombra el archivo
-        rename(APP_ROOT . $carpetaDestino . $nombre_imagen, APP_ROOT . $nombreCompuestoImagen);
+		if (!rename($carpetaDestino . $nombre_imagen, $nombreCompuestoImagen)) return "0";
         // dar permisos de lectura y escritura
-        chmod(APP_ROOT . $nombreCompuestoImagen, 0640);
+		@chmod($nombreCompuestoImagen, 0640);
         // unlink elimina el archivo
   
-        return $nombreCompuestoImagen;
+		return $carpetaRelativa . basename($nombreCompuestoImagen);
     } else {
         return "0";
     }
@@ -486,6 +515,9 @@ function procesarCaratulas($id)
 function procesarArchivoKey($id)
 {
     $carpetaDestino = '/Documentos/Key/';
+	if (!isset($_FILES['comprobante']) && isset($_FILES['documento'])) $_FILES['comprobante'] = $_FILES['documento'];
+	if (!isset($_FILES['comprobante']) || ($_FILES['comprobante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	if (prepararDirectorioCarga($carpetaDestino) === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['comprobante']['name']);
@@ -520,6 +552,9 @@ function procesarArchivoKey($id)
 function procesarArchivoSdg($id)
 {
     $carpetaDestino = '/Documentos/Sdg/';
+	if (!isset($_FILES['comprobante']) && isset($_FILES['documento'])) $_FILES['comprobante'] = $_FILES['documento'];
+	if (!isset($_FILES['comprobante']) || ($_FILES['comprobante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	if (prepararDirectorioCarga($carpetaDestino) === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['comprobante']['name']);
@@ -554,6 +589,9 @@ function procesarArchivoSdg($id)
 function procesarArchivoCer($id)
 {
     $carpetaDestino = '/Documentos/Cer/';
+	if (!isset($_FILES['comprobante']) && isset($_FILES['documento'])) $_FILES['comprobante'] = $_FILES['documento'];
+	if (!isset($_FILES['comprobante']) || ($_FILES['comprobante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return "0";
+	if (prepararDirectorioCarga($carpetaDestino) === null) return "0";
     $pesoMaxicoImagen = 2000000;
     $nombreCompuestoImagen = "default.txt";
     $nombre_imagen = basename($_FILES['comprobante']['name']);
@@ -868,6 +906,11 @@ function modificarConstanciaSf()
     $adminEmpresa = new AdministradorEmpresa();
     $id = $_POST['id'];
     $constancia = procesarConstanciaSf($id);
+	if (!$constancia || $constancia === "0") {
+		http_response_code(400);
+		echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar la constancia.']);
+		return;
+	}
     $constancia = str_replace(APP_ROOT, '', $constancia);
     $aviso = new Aviso();
     if ($adminEmpresa->modificarConstancia($id, $constancia, date("Y-m-d"))) {
@@ -901,6 +944,11 @@ function modificarPdf()
     $adminEmpresa = new AdministradorEmpresa();
     $id = $_POST['id'];
     $pdf = procesarPdf($id);
+	if (!$pdf || $pdf === "0") {
+		http_response_code(400);
+		echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el documento 32D.']);
+		return;
+	}
 
     $aviso = new Aviso();
     $fecha = date("Y-m-d");
@@ -963,6 +1011,11 @@ function modificarImagen()
 {
     $id = $_POST['id'];
     $logo = procesarImagen($id);
+	if (!$logo || $logo === "0") {
+		http_response_code(400);
+		echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el logotipo.']);
+		return;
+	}
     $adminEmpresa = new AdministradorEmpresa();
     $adminEmpresa->modificarImagen($id, $logo);
     echo "1";
@@ -1336,6 +1389,11 @@ function agregarDocumentoFiels()
     $tipo = $_POST['tipo'];
     if ($tipo == "KEY") {
         $documento = procesarArchivoKey(random_int(0, 1000000));
+		if (!$documento || $documento === "0") {
+			http_response_code(400);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el archivo KEY.']);
+			return;
+		}
         $adminEmpresa->agregarFiel($empresa, $documento, $tipo);
         $aviso = new Aviso();
         $aviso->estatus = "Exito";
@@ -1344,6 +1402,11 @@ function agregarDocumentoFiels()
         echo json_encode($aviso);
     } else if ($tipo == "CSD") {
         $documento = procesarArchivoCer(random_int(0, 1000000));
+		if (!$documento || $documento === "0") {
+			http_response_code(400);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el certificado CER.']);
+			return;
+		}
         $adminEmpresa->agregarFiel($empresa, $documento, "CER");
         $aviso = new Aviso();
         $aviso->estatus = "Exito";
@@ -1368,6 +1431,11 @@ function agregarSelloSat()
     $tipo = $_POST['tipo'];
     if ($tipo == "KEY") {
         $documento = procesarArchivoKey(random_int(0, 1000000));
+		if (!$documento || $documento === "0") {
+			http_response_code(400);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el archivo KEY.']);
+			return;
+		}
         $adminEmpresa->agregarSelloSat($empresa, $documento, $tipo);
         $aviso = new Aviso();
         $aviso->estatus = "Exito";
@@ -1376,6 +1444,11 @@ function agregarSelloSat()
         echo json_encode($aviso);
     } else if ($tipo == "CSD") {
         $documento = procesarArchivoCer(random_int(0, 1000000));
+		if (!$documento || $documento === "0") {
+			http_response_code(400);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el certificado CER.']);
+			return;
+		}
         $adminEmpresa->agregarSelloSat($empresa, $documento, "CER");
         $aviso = new Aviso();
         $aviso->estatus = "Exito";
@@ -1422,6 +1495,11 @@ function agregarActaConst()
     $adminEmpresa = new AdministradorEmpresa();
     $empresa = $_POST['id'];
     $documento = procesarActas(random_int(0, 1000000));
+	if (!$documento || $documento === "0") {
+		http_response_code(400);
+		echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el acta.']);
+		return;
+	}
     $contenido = "";
     if (isset($_POST['ActaCost'])) {
         $contenido = $contenido .  $_POST['ActaCost'] . ",";
@@ -1826,6 +1904,11 @@ function agregarEstadoDeCuenta()
     $empresa = $_POST['id'];
     $tipo = $_POST['tipo'];
     $documento = procesarEstadosCuenta(random_int(0, 1000000));
+	if (!$documento || $documento === "0") {
+		http_response_code(400);
+		echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el estado de cuenta.']);
+		return;
+	}
     $adminEmpresa->agregarEstadoCUenta($empresa, $documento, $tipo);
     $aviso = new Aviso();
     $aviso->estatus = "Exito";
@@ -1852,6 +1935,11 @@ function agregarCaratula()
     $empresa = $_POST['id'];
     $tipo = $_POST['tipo'];
     $documento = procesarCaratulas(random_int(0, 1000000));
+	if (!$documento || $documento === "0") {
+		http_response_code(400);
+		echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar la carátula bancaria.']);
+		return;
+	}
     $adminEmpresa->agregarCaratula($empresa, $documento, $tipo);
     $aviso = new Aviso();
     $aviso->estatus = "Exito";
@@ -1905,6 +1993,11 @@ function agregarImms()
     $tipo = $_POST['tipo'];
     if ($tipo == "KEY") {
         $documento = procesarArchivoKey(random_int(0, 1000000));
+		if (!$documento || $documento === "0") {
+			http_response_code(400);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el archivo KEY de IMSS.']);
+			return;
+		}
         $adminEmpresa->agregarImms($documento, $empresa, $tipo);
         $aviso = new Aviso();
         $aviso->estatus = "Exito";
@@ -1913,6 +2006,11 @@ function agregarImms()
         echo json_encode($aviso);
     } else if ($tipo == "CSD") {
         $documento = procesarConstanciaPfx(random_int(0, 1000000));
+		if (!$documento || $documento === "0") {
+			http_response_code(400);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo guardar el archivo PFX de IMSS.']);
+			return;
+		}
         $adminEmpresa->agregarImms($documento, $empresa, "CER");
         $aviso = new Aviso();
         $aviso->estatus = "Exito";
@@ -2231,10 +2329,12 @@ switch ($accion) {
         $tipo = $_POST['tipo'];
         // Procesar archivo subido
         $documento = '';
-        $carpetaDestino = APP_ROOT . '/Documentos/Fiel/';
-        if (!is_dir($carpetaDestino)) {
-            mkdir($carpetaDestino, 0777, true);
-        }
+		$carpetaDestino = prepararDirectorioCarga('/Documentos/Fiel/');
+		if ($carpetaDestino === null) {
+			http_response_code(500);
+			echo json_encode(['estatus' => 'Error', 'mensaje' => 'No se pudo preparar la carpeta de archivos FIEL']);
+			exit;
+		}
         if (isset($_FILES['documento']) && $_FILES['documento']['error'] === UPLOAD_ERR_OK) {
             $nombreArchivo = basename($_FILES['documento']['name']);
             $rutaDestino = $carpetaDestino . uniqid() . '_' . $nombreArchivo;

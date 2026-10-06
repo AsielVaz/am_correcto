@@ -24,6 +24,35 @@ foreach ($empresas as $e) {
         break;
     }
 }
+
+$normalizarArchivos = static function (array $items): array {
+    foreach ($items as &$item) {
+        $esObjeto = is_object($item);
+        $ruta = $esObjeto
+            ? (string) ($item->documento ?? $item->documento1 ?? '')
+            : (string) ($item['documento'] ?? $item['documento1'] ?? '');
+
+        if ($ruta === '' || (!str_starts_with($ruta, '/Documentos/') && !str_starts_with($ruta, '/Imagenes/'))) {
+            continue;
+        }
+        if (is_file(appFilesystemPath($ruta))) {
+            continue;
+        }
+
+        if ($esObjeto) {
+            $item->documento = '';
+            if (isset($item->documento1)) $item->documento1 = '';
+            $item->archivoFaltante = true;
+        } else {
+            $item['documento'] = '';
+            if (array_key_exists('documento1', $item)) $item['documento1'] = '';
+            $item['archivoFaltante'] = true;
+        }
+    }
+    unset($item);
+    return array_values($items);
+};
+
 // Datos secundarios y relaciones
 $data = [
     // Cuentas bancarias SOLO de la empresa seleccionada
@@ -32,19 +61,19 @@ $data = [
     'correos' => $admin->dameCorreosPorEmpresa($id),
     // Documentos y relaciones
     // Mapear documento_1 a documento para carátulas
-    'caratulas' => array_map(function ($caratula) {
+    'caratulas' => $normalizarArchivos(array_map(function ($caratula) {
         if (isset($caratula->documento1) && !isset($caratula->documento)) {
             $caratula->documento = $caratula->documento1;
         }
         return $caratula;
-    }, $admin->dameCaratulasPorEmpresa($id)),
+    }, $admin->dameCaratulasPorEmpresa($id))),
     // Mapear documento_1 a documento para estados de cuenta
-    'estadosCuenta' => array_map(function ($estado) {
+    'estadosCuenta' => $normalizarArchivos(array_map(function ($estado) {
         if (isset($estado->documento1) && !isset($estado->documento)) {
             $estado->documento = $estado->documento1;
         }
         return $estado;
-    }, $admin->dameEstadosDeCuentaPorEmpresa($id)),
+    }, $admin->dameEstadosDeCuentaPorEmpresa($id))),
     'actas' => $admin->dameActasConstitutivasPorEmpresa($id, $clave),
     'poderes' => $admin->dameDocumentoPoderPorEmpresa($id, $clave),
     'ineRep' => $admin->dameIneRepPorEmpresa($id, $clave),
@@ -201,6 +230,21 @@ $data = [
                 ];
             }
         }
+        foreach ($docs as &$doc) {
+            $rutaDocumento = (string) ($doc['documento'] ?? '');
+            if ($rutaDocumento === '' || !str_starts_with($rutaDocumento, '/Documentos/')) {
+                continue;
+            }
+
+            if (!is_file(appFilesystemPath($rutaDocumento))) {
+                // Evitar enlaces 404 y permitir que el usuario reponga un archivo
+                // cuyo registro sobrevivió pero cuyo contenido ya no está en disco.
+                $doc['documento'] = '';
+                $doc['estadoDocumento'] = 'archivo_faltante';
+            }
+        }
+        unset($doc);
+
         return array_values($docs);
     })(),
     'rppc' => $admin->dameRppcPorEmpresa($id, $clave),
@@ -210,32 +254,32 @@ $data = [
     'contrasIofacturo' => $admin->dameCuentasIofacturo($id, $clave),
     'contrasBanco' => $admin->dameContrasBanco($id, $clave),
     // FIEL y sellos (normalizar a arrays y mapear documento_1 a documento)
-    'fiel' => array_map(function ($fiel) {
+    'fiel' => $normalizarArchivos(array_map(function ($fiel) {
         // Preservar todos los campos originales y normalizar 'documento'
         $row = is_object($fiel) ? get_object_vars($fiel) : (array)$fiel;
         if (!isset($row['documento']) && isset($row['documento1'])) {
             $row['documento'] = $row['documento1'];
         }
         return $row;
-    }, $admin->dameFielPorEmpresa($id, $clave)),
-    'sellosSat' => array_map(function ($sello) {
+    }, $admin->dameFielPorEmpresa($id, $clave))),
+    'sellosSat' => $normalizarArchivos(array_map(function ($sello) {
         // Preservar todos los campos originales y normalizar 'documento'
         $row = is_object($sello) ? get_object_vars($sello) : (array)$sello;
         if (!isset($row['documento']) && isset($row['documento1'])) {
             $row['documento'] = $row['documento1'];
         }
         return $row;
-    }, $admin->dameSelosSatPorEmpresa($id, $clave)),
+    }, $admin->dameSelosSatPorEmpresa($id, $clave))),
     'contraFiel' => $admin->dameContraFiel($id),
     'contraSelloSat' => $admin->dameContraSelloSat($id),
     // IMSS
     // Mapear documento a documento para IMSS (ya viene como documento, pero aseguramos)
-    'imss' => array_map(function ($imss) {
+    'imss' => $normalizarArchivos(array_map(function ($imss) {
         if (isset($imss->documento)) {
             $imss->documento = $imss->documento;
         }
         return $imss;
-    }, $admin->dameImssPorempresa($id)),
+    }, $admin->dameImssPorempresa($id))),
     'contraImss' => $admin->dameContraImssEmpresa($id),
 ];
 

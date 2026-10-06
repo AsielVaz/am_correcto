@@ -132,7 +132,10 @@ const DETAIL_SECTIONS = [
 		modal: '#modalEstadosCuenta',
 		tipo: 'estados',
 		populate: populateEstadosCuentaModal,
-		evaluator: (detalle) => detalle && Array.isArray(detalle.estadosCuenta) && detalle.estadosCuenta.length,
+		evaluator: (detalle) =>
+			detalle &&
+			Array.isArray(detalle.estadosCuenta) &&
+			detalle.estadosCuenta.some((row) => row.documento || row.documento1),
 	},
 	{
 		section: 'caratulas_bancarias',
@@ -140,7 +143,10 @@ const DETAIL_SECTIONS = [
 		modal: '#modalCaratulasBancarias',
 		tipo: 'caratulas',
 		populate: populateCaratulasBancariasModal,
-		evaluator: (detalle) => detalle && Array.isArray(detalle.caratulas) && detalle.caratulas.length,
+		evaluator: (detalle) =>
+			detalle &&
+			Array.isArray(detalle.caratulas) &&
+			detalle.caratulas.some((row) => row.documento || row.documento1),
 	},
 ];
 // Si hay lógica de renderizado de filas para estados de cuenta o carátulas bancarias, omitir la columna 'Tipo' y su valor
@@ -282,14 +288,19 @@ function getDownloadButtonHtml(url, label = 'Descargar') {
 	if (!url) {
 		return '';
 	}
+	const resolvedUrl = typeof window.resolveAppPath === 'function' ? window.resolveAppPath(url) : url;
 	const safeLabel = escapeAttribute(label);
 	return `
-		<a href='${url}' class="${getActionButtonClass(
+		<a href='${escapeAttribute(resolvedUrl)}' class="${getActionButtonClass(
 		'outline-primary'
 	)}" download aria-label="${safeLabel}" title="${safeLabel}">
 			<i class='bx bx-download'></i>
 		</a>
 	`;
+}
+
+function getMissingDocumentBadgeHtml() {
+	return '<span class="badge bg-warning-subtle text-warning" title="El archivo físico no existe">Archivo no disponible</span>';
 }
 
 function renderActionGroup(buttons, fallback = '<span class="text-muted small">Sin acciones</span>') {
@@ -1574,6 +1585,7 @@ function populateFIELModal(detalle) {
 	if (registros.length) {
 		registros.forEach((row, index) => {
 			const actionButtons = [];
+			if (row.archivoFaltante) actionButtons.push(getMissingDocumentBadgeHtml());
 			const downloadHtml = getDownloadButtonHtml(row.documento, 'Descargar documento');
 			if (downloadHtml) {
 				actionButtons.push(downloadHtml);
@@ -2163,13 +2175,17 @@ function populateDocumentosPermanentesModal(detalle) {
 			const actionButtons = [];
 			const uploaderIdValue =
 				typeof row.idUsuarioSubio !== 'undefined' && row.idUsuarioSubio !== null ? row.idUsuarioSubio : null;
-			const downloadHtml = getDownloadButtonHtml(row.documento, 'Descargar documento');
+			const documentUrl =
+				typeof window.resolveAppPath === 'function'
+					? window.resolveAppPath(row.documento || '')
+					: row.documento || '';
+			const downloadHtml = getDownloadButtonHtml(documentUrl, 'Descargar documento');
 			if (downloadHtml) {
 				actionButtons.push(downloadHtml);
 			}
-			if (row.documento) {
+			if (documentUrl) {
 				const viewBtnClass = getActionButtonClass('outline-secondary');
-				const safeUrl = escapeAttribute(row.documento);
+				const safeUrl = escapeAttribute(documentUrl);
 				const safeName = escapeAttribute(row.descripcion || row.contenido || 'Documento');
 				const uploaderIdAttr =
 					uploaderIdValue !== null && uploaderIdValue !== undefined
@@ -2229,7 +2245,7 @@ function populateDocumentosPermanentesModal(detalle) {
 				id: idDocumento,
 				idString: idDocumentoStr,
 				descripcion: descripcionDoc,
-				documento: row.documento || '',
+				documento: documentUrl,
 				estado: estadoKey,
 				puedeRevisar: estadoKey === 'revision' && !!puedeRevisarEste,
 				puedeRevisarRaw: !!puedeRevisarEste,
@@ -2472,9 +2488,12 @@ function populateEstadosCuentaModal(detalle) {
 		registros.forEach((row, index) => {
 			const tipo = row.tipo || '';
 			const fecha = row.fechaCreacion || row.fec_creacion || row.fecha || '';
-			const documento = row.documento || row.documento1 || '';
+			const rawDocumento = row.documento || row.documento1 || '';
+			const documento =
+				typeof window.resolveAppPath === 'function' ? window.resolveAppPath(rawDocumento) : rawDocumento;
 			const idFila = row.id || index;
 			const actionButtons = [];
+			if (row.archivoFaltante) actionButtons.push(getMissingDocumentBadgeHtml());
 			// Botón ver (igual que documentos permanentes)
 			if (documento) {
 				const viewBtnClass = getActionButtonClass('outline-secondary');
@@ -2521,9 +2540,12 @@ function populateCaratulasBancariasModal(detalle) {
 		registros.forEach((row, index) => {
 			const tipo = row.tipo || '';
 			const fecha = row.fechaCreacion || row.fec_creacion || row.fecha || '';
-			const documento = row.documento || row.documento1 || '';
+			const rawDocumento = row.documento || row.documento1 || '';
+			const documento =
+				typeof window.resolveAppPath === 'function' ? window.resolveAppPath(rawDocumento) : rawDocumento;
 			const idFila = row.id || index;
 			const actionButtons = [];
+			if (row.archivoFaltante) actionButtons.push(getMissingDocumentBadgeHtml());
 			// Botón ver (igual que documentos permanentes)
 			if (documento) {
 				const viewBtnClass = getActionButtonClass('outline-secondary');
@@ -2568,6 +2590,7 @@ function populateIMSSModal(detalle) {
 	if (registros.length) {
 		registros.forEach((row, index) => {
 			const actionButtons = [];
+			if (row.archivoFaltante) actionButtons.push(getMissingDocumentBadgeHtml());
 			const downloadHtml = getDownloadButtonHtml(row.documento || '', 'Descargar documento');
 			if (downloadHtml) {
 				actionButtons.push(downloadHtml);
@@ -2605,6 +2628,7 @@ function populateSellosSATModal(detalle) {
 	if (registros.length) {
 		registros.forEach((row, index) => {
 			const actionButtons = [];
+			if (row.archivoFaltante) actionButtons.push(getMissingDocumentBadgeHtml());
 			const downloadHtml = getDownloadButtonHtml(row.documento, 'Descargar sello SAT');
 			if (downloadHtml) {
 				actionButtons.push(downloadHtml);

@@ -487,10 +487,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		formData.append('CSF', input.files[0]);
 
 		try {
-			await fetch('../../api/routes/apiEmpresa.php', {
+			const response = await fetch('../../api/routes/apiEmpresa.php', {
 				method: 'POST',
 				body: formData,
 			});
+			const data = await response.json();
+			if (!response.ok || data.estatus === 'Error') {
+				throw new Error(data.mensaje || 'No se pudo guardar la constancia.');
+			}
 
 			// Actualizar el iframe con el PDF recién subido
 			const cont = document.getElementById('iframe-constancia-container');

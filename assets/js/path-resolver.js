@@ -6,6 +6,7 @@
 
 	window.resolveAppPath = (value) => {
 		if (typeof value !== 'string' || value === '') return value;
+		if (!base || value.startsWith(`${base}/`)) return value;
 		return managedRoots.some((root) => value.startsWith(root)) ? base + value : value;
 	};
 
@@ -23,7 +24,18 @@
 	document.addEventListener('DOMContentLoaded', () => {
 		resolveNode(document.body);
 		new MutationObserver((mutations) => {
-			mutations.forEach((mutation) => mutation.addedNodes.forEach(resolveNode));
-		}).observe(document.body, { childList: true, subtree: true });
+			mutations.forEach((mutation) => {
+				if (mutation.type === 'attributes') {
+					resolveNode(mutation.target);
+					return;
+				}
+				mutation.addedNodes.forEach(resolveNode);
+			});
+		}).observe(document.body, {
+			attributes: true,
+			attributeFilter: ['href', 'src'],
+			childList: true,
+			subtree: true,
+		});
 	});
 })();

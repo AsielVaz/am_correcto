@@ -2,7 +2,8 @@
 document.addEventListener('click', function (e) {
 	const btn = e.target.closest('.btn-ver-caratula-bancaria');
 	if (btn) {
-		const url = decodeURIComponent(btn.getAttribute('data-url') || '');
+		const rawUrl = decodeURIComponent(btn.getAttribute('data-url') || '');
+		const url = typeof window.resolveAppPath === 'function' ? window.resolveAppPath(rawUrl) : rawUrl;
 		if (url) {
 			const iframe = document.getElementById('iframePreviewCaratulaBancaria');
 			if (iframe) iframe.src = url;

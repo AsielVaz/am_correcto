@@ -396,6 +396,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			mostrarAlerta('No se encontró el archivo para vista previa.', 'danger');
 			return;
 		}
+		if (typeof window.resolveAppPath === 'function') {
+			src = window.resolveAppPath(src);
+		}
 		setCurrentPreviewDocument(entry);
 		previewFrame.src = src;
 		if (previewTitle) previewTitle.textContent = resolvedTitle || 'Vista previa';

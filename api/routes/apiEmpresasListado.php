@@ -224,6 +224,19 @@ foreach ($data as $empresa) {
         'aplica_imss' => isset($empresa->aplicaImss) ? $empresa->aplicaImss : 1,
     ];
 
+    $archivosFaltantes = [];
+    foreach (['logo', 'comprobanteDom', 'constanciaSf', 'pdf'] as $campoArchivo) {
+        $rutaArchivo = trim((string) ($row[$campoArchivo] ?? ''));
+        if ($rutaArchivo === '' || (!str_starts_with($rutaArchivo, '/Documentos/') && !str_starts_with($rutaArchivo, '/Imagenes/'))) {
+            continue;
+        }
+        if (!is_file(appFilesystemPath($rutaArchivo))) {
+            $row[$campoArchivo] = '';
+            $archivosFaltantes[$campoArchivo] = true;
+        }
+    }
+    $row['archivosFaltantes'] = $archivosFaltantes;
+
     $estadoCampos = [];
     foreach ($CAMPO_POSTERGADO_MAP as $campoKey => $campoPostergado) {
         $postInfo = isset($postergaciones[$empresa->id][$campoPostergado]) ? $postergaciones[$empresa->id][$campoPostergado] : null;

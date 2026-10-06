@@ -84,10 +84,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		formData.append('comprobante', input.files[0]);
 
 		try {
-			await fetch('../../api/routes/apiEmpresa.php', {
+			const response = await fetch('../../api/routes/apiEmpresa.php', {
 				method: 'POST',
 				body: formData,
 			});
+			const data = await response.json();
+			if (!response.ok || data.status === 'error' || data.estatus === 'Error') {
+				throw new Error(data.message || data.mensaje || 'No se pudo guardar el comprobante.');
+			}
 
 			// Recargar solo el comprobante en el iframe
 			const cont = document.getElementById('iframe-comprobante-container');

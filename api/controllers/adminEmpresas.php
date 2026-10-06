@@ -705,13 +705,31 @@ class AdministradorEmpresa extends conector
 
     public function eliminarDocumentoPermanente($id)
     {
-		$id = (int) $id;
-		if ($id <= 0) {
-			return false;
+			$id = (int) $id;
+			if ($id <= 0) {
+				return false;
+			}
+
+			$this->iniciarTransaccion();
+			try {
+				foreach (['analisis_nombres', 'analisis_fechas', 'analisis_numeros'] as $tablaAnalisis) {
+					$this->preparar("DELETE FROM `{$tablaAnalisis}` WHERE id_documento = ?", [$id], 'i');
+				}
+
+				$this->preparar('DELETE FROM actas_const WHERE id = ?', [$id], 'i');
+				$verificacion = $this->preparar('SELECT id FROM actas_const WHERE id = ? LIMIT 1', [$id], 'i');
+				if ($verificacion instanceof mysqli_result && $verificacion->num_rows > 0) {
+					$this->revertirTransaccion();
+					return false;
+				}
+
+				$this->confirmarTransaccion();
+				return true;
+			} catch (Throwable $e) {
+				$this->revertirTransaccion();
+				throw $e;
+			}
 		}
-		$this->preparar('DELETE FROM actas_const WHERE id = ?', [$id], 'i');
-		return $this->filasAfectadas() === 1;
-	}
 
 	public function obtenerRutaDocumentoPermanente($id): ?string
 	{

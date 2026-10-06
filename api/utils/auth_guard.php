@@ -17,7 +17,9 @@ function requireAuth(): array
     }
 
     $headers = function_exists('getallheaders') ? getallheaders() : [];
-    $authHeader = null;
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION']
+        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+        ?? null;
     foreach ($headers as $key => $value) {
         if (strtolower($key) === 'authorization') {
             $authHeader = $value;

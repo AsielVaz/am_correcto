@@ -79,11 +79,18 @@ function renderUsersTable(data) {
 					};"></span>
 			   </td>
 			   <td class='py-2 px-2 text-center'>
-				   <button type="button" class="btn btn-outline-primary btn-sm action-icon-btn d-inline-flex align-items-center justify-content-center btn-editar-usuario" data-user-id='${
-						row.id
-					}' aria-label="Editar usuario" title="Editar usuario">
-					   <i class="bx bx-edit-alt"></i>
-				   </button>
+				   <div class="user-actions d-inline-flex align-items-center justify-content-center gap-1">
+					   <button type="button" class="btn btn-outline-primary btn-sm action-icon-btn btn-editar-usuario" data-user-id='${
+							row.id
+						}' aria-label="Editar usuario" title="Editar usuario">
+						   <i class="bx bx-edit-alt" aria-hidden="true"></i>
+					   </button>
+					   <button type="button" class="btn btn-outline-secondary btn-sm action-icon-btn btn-cambiar-contrasena" data-user-id='${
+							row.id
+						}' aria-label="Cambiar contraseña" title="Cambiar contraseña">
+						   <i class="bx bx-key" aria-hidden="true"></i>
+					   </button>
+				   </div>
 			   </td>
 		   `;
 		tbody.appendChild(tr);
@@ -212,6 +219,7 @@ function initializeAdminPage() {
 	});
 	bindNewUserModalHandlers();
 	bindEditUserHandlers();
+	bindPasswordChangeHandlers();
 }
 
 let newUserModalEl = null;
@@ -553,4 +561,144 @@ function bindEditUserHandlers() {
 			}
 		});
 	}
+}
+
+let passwordModalEl = null;
+let passwordForm = null;
+let passwordAlert = null;
+let passwordSubmitBtn = null;
+let passwordHandlersBound = false;
+let passwordUserId = null;
+
+function ensurePasswordElements() {
+	passwordModalEl ||= document.getElementById('modalCambiarContrasena');
+	passwordForm ||= document.getElementById('formCambiarContrasena');
+	passwordAlert ||= document.getElementById('alertCambiarContrasena');
+	passwordSubmitBtn ||= document.getElementById('btnGuardarContrasena');
+	return passwordModalEl && passwordForm && passwordSubmitBtn;
+}
+
+function setPasswordAlert(message, type = 'danger') {
+	if (!ensurePasswordElements() || !passwordAlert) return;
+	passwordAlert.textContent = message || '';
+	passwordAlert.className = message ? `alert alert-${type}` : 'alert d-none';
+}
+
+function resetPasswordForm() {
+	if (!ensurePasswordElements()) return;
+	passwordForm.reset();
+	passwordUserId = null;
+	passwordForm.querySelector('[name="id"]').value = '';
+	document.getElementById('cambiarContrasenaUsuario').textContent = '';
+	setPasswordAlert('');
+	passwordForm.querySelectorAll('.password-toggle').forEach((button) => {
+		const input = document.getElementById(button.dataset.passwordTarget);
+		if (input) input.type = 'password';
+		button.setAttribute('aria-pressed', 'false');
+		button.querySelector('i')?.classList.replace('bx-hide', 'bx-show');
+	});
+	passwordSubmitBtn.disabled = false;
+	passwordSubmitBtn.innerHTML = '<i class="bx bx-check me-1"></i> Actualizar contraseña';
+}
+
+function openPasswordModal(user) {
+	if (!ensurePasswordElements() || !user) return;
+	resetPasswordForm();
+	passwordUserId = parseInt(user.id, 10);
+	passwordForm.querySelector('[name="id"]').value = passwordUserId;
+	const displayName = getSortableName(user) || user.email || 'Usuario';
+	document.getElementById('cambiarContrasenaUsuario').textContent = `${displayName} · ${user.email || ''}`;
+	bootstrap.Modal.getOrCreateInstance(passwordModalEl).show();
+}
+
+function bindPasswordChangeHandlers() {
+	if (passwordHandlersBound || !ensurePasswordElements()) return;
+	const accountsTable = document.getElementById('accounts-table');
+	if (!accountsTable) return;
+	passwordHandlersBound = true;
+
+	accountsTable.addEventListener('click', function (event) {
+		const button = event.target.closest('.btn-cambiar-contrasena');
+		if (!button) return;
+		const userId = parseInt(button.dataset.userId, 10);
+		const user = currentUsers.find((item) => parseInt(item.id, 10) === userId);
+		if (!user) {
+			showMainAlert('No se encontró la información del usuario seleccionado.', 'danger');
+			return;
+		}
+		openPasswordModal(user);
+	});
+
+	passwordModalEl.addEventListener('shown.bs.modal', function () {
+		document.getElementById('nuevaContrasena')?.focus();
+	});
+
+	passwordModalEl.addEventListener('hidden.bs.modal', resetPasswordForm);
+
+	passwordForm.querySelectorAll('.password-toggle').forEach((button) => {
+		button.addEventListener('click', function () {
+			const input = document.getElementById(button.dataset.passwordTarget);
+			if (!input) return;
+			const showing = input.type === 'text';
+			input.type = showing ? 'password' : 'text';
+			button.setAttribute('aria-pressed', showing ? 'false' : 'true');
+			button.setAttribute('aria-label', `${showing ? 'Mostrar' : 'Ocultar'} contraseña`);
+			const icon = button.querySelector('i');
+			if (icon) icon.className = showing ? 'bx bx-show' : 'bx bx-hide';
+			input.focus();
+		});
+	});
+
+	passwordForm.addEventListener('submit', async function (event) {
+		event.preventDefault();
+		if (!hasAdminAccess() || !passwordUserId) {
+			setPasswordAlert('No tienes permisos para realizar esta acción.');
+			return;
+		}
+
+		const passInput = passwordForm.querySelector('[name="pass"]');
+		const confirmationInput = passwordForm.querySelector('[name="pass_confirmation"]');
+		const pass = passInput.value;
+		const confirmation = confirmationInput.value;
+		if (pass.length < 6) {
+			setPasswordAlert('La contraseña debe tener al menos 6 caracteres.');
+			passInput.focus();
+			return;
+		}
+		if (pass !== confirmation) {
+			setPasswordAlert('Las contraseñas no coinciden.');
+			confirmationInput.focus();
+			return;
+		}
+
+		const originalContent = passwordSubmitBtn.innerHTML;
+		passwordSubmitBtn.disabled = true;
+		passwordSubmitBtn.innerHTML =
+			'<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Actualizando...';
+		setPasswordAlert('');
+
+		const formData = new FormData();
+		formData.append('accion', 'cambiar-contrasena');
+		formData.append('id', String(passwordUserId));
+		formData.append('pass', pass);
+
+		try {
+			const response = await fetch('../../api/routes/apiUsuarios.php', {
+				method: 'POST',
+				body: formData,
+			});
+			const data = await response.json().catch(() => ({}));
+			if (!response.ok || !data.success) {
+				throw new Error(data.error || 'No fue posible actualizar la contraseña.');
+			}
+			bootstrap.Modal.getInstance(passwordModalEl)?.hide();
+			showMainAlert('Contraseña actualizada correctamente.');
+		} catch (error) {
+			console.error('Error al actualizar contraseña:', error);
+			setPasswordAlert(error.message || 'No fue posible actualizar la contraseña.');
+		} finally {
+			passwordSubmitBtn.disabled = false;
+			passwordSubmitBtn.innerHTML = originalContent;
+		}
+	});
 }

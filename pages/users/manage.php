@@ -175,6 +175,50 @@ include '../../components/main.php';
                     </div>
                 </div>
             </div>
+            <div class="modal fade" id="modalCambiarContrasena" tabindex="-1" aria-labelledby="modalCambiarContrasenaLabel" aria-hidden="true" data-requires="admin">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form id="formCambiarContrasena" autocomplete="off" data-requires="admin" data-permission-mode="disable">
+                            <div class="modal-header">
+                                <div>
+                                    <h5 class="modal-title" id="modalCambiarContrasenaLabel"><i class="bx bx-key me-2"></i>Cambiar contraseña</h5>
+                                    <p class="password-modal-subtitle mb-0" id="cambiarContrasenaUsuario"></p>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="alertCambiarContrasena" class="alert d-none" role="alert"></div>
+                                <input type="hidden" name="id" value="">
+                                <div class="mb-3">
+                                    <label for="nuevaContrasena" class="form-label">Nueva contraseña</label>
+                                    <div class="input-group password-input-group">
+                                        <input type="password" class="form-control" id="nuevaContrasena" name="pass" required minlength="6" maxlength="255" autocomplete="new-password" aria-describedby="passwordHelp">
+                                        <button type="button" class="btn btn-outline-secondary password-toggle" data-password-target="nuevaContrasena" aria-label="Mostrar nueva contraseña" aria-pressed="false">
+                                            <i class="bx bx-show" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                    <div id="passwordHelp" class="form-text">Usa al menos 6 caracteres.</div>
+                                </div>
+                                <div>
+                                    <label for="confirmarContrasena" class="form-label">Confirmar contraseña</label>
+                                    <div class="input-group password-input-group">
+                                        <input type="password" class="form-control" id="confirmarContrasena" name="pass_confirmation" required minlength="6" maxlength="255" autocomplete="new-password">
+                                        <button type="button" class="btn btn-outline-secondary password-toggle" data-password-target="confirmarContrasena" aria-label="Mostrar confirmación de contraseña" aria-pressed="false">
+                                            <i class="bx bx-show" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary" id="btnGuardarContrasena">
+                                    <i class="bx bx-check me-1"></i> Actualizar contraseña
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="alert alert-warning mt-3 d-none" id="admin-access-warning">
             No tienes permisos para administrar usuarios. Contacta a un administrador si consideras que esto es un error.

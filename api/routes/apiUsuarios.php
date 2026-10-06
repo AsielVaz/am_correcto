@@ -35,6 +35,7 @@ $casoActualizar = "actualizar";
 $casoDireccion = "direccion";
 $casoSubirImagen = "imagen";
 $casoRecuperar = "recuperar-contrasena";
+$casoCambiarContrasena = "cambiar-contrasena";
 $casoAcender = "acender";
 $casoDecender = "desender";
 $casoDeshabilitar = "deshabilitar";
@@ -231,6 +232,30 @@ function procesarActualizacionContrasena()
   }
 }
 
+function procesarCambioContrasenaAdmin()
+{
+  $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 1]
+  ]);
+  $pass = (string) ($_POST['pass'] ?? '');
+
+  if (!$id) {
+    respondWithError(422, 'Usuario inválido.');
+  }
+  if (strlen($pass) < 6) {
+    respondWithError(422, 'La contraseña debe tener al menos 6 caracteres.');
+  }
+
+  $admin = new AdministradorUsuario();
+  $usuario = $admin->dameUsuarioId($id);
+  if ($usuario->id <= 0) {
+    respondWithError(404, 'El usuario no existe.');
+  }
+
+  $admin->actualizarContrasena($id, $pass);
+  echo json_encode(['success' => true]);
+}
+
 function procesarActualizacionDireccion()
 {
 
@@ -371,6 +396,9 @@ switch ($accion) {
     break;
   case $casoRecuperar:
     procesarActualizacionContrasena();
+    break;
+  case $casoCambiarContrasena:
+    procesarCambioContrasenaAdmin();
     break;
   case $casoAcender:
     procesarAcender();

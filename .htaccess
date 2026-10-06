@@ -3,7 +3,12 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     RewriteRule ^(?:Documentos|Imagenes)/.*\.(?:php|phtml|phar)$ - [F,L,NC]
+</IfModule>
+
+<IfModule mod_setenvif.c>
+    SetEnvIf Authorization "(.+)" HTTP_AUTHORIZATION=$1
 </IfModule>
 
 <FilesMatch "^(\.env|\.env\.example|composer\.(json|lock))$">
@@ -16,5 +21,4 @@ DirectoryIndex index.php
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
 </IfModule>
-
 

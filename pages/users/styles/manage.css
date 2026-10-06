@@ -87,10 +87,47 @@
 	border-radius: 50%;
 	padding: 0;
 	line-height: 1;
+	transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease, color 160ms ease;
+}
+
+.action-icon-btn:active,
+.password-toggle:active {
+	transform: scale(0.97);
 }
 
 .action-icon-btn i {
 	display: block;
 	font-size: 1.05em;
 	line-height: 1;
+}
+
+.password-modal-subtitle {
+	color: var(--bs-secondary-color);
+	font-size: 0.82rem;
+	line-height: 1.4;
+	margin-top: 0.2rem;
+	max-width: 24rem;
+	overflow-wrap: anywhere;
+}
+
+.password-input-group .form-control:focus {
+	z-index: 3;
+}
+
+.password-toggle {
+	min-width: 2.75rem;
+	transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease, color 160ms ease;
+}
+
+.password-toggle i {
+	display: block;
+	font-size: 1.15rem;
+	line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.action-icon-btn,
+	.password-toggle {
+		transition: background-color 160ms ease, color 160ms ease;
+	}
 }

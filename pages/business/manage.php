@@ -90,5 +90,7 @@ include '../../components/main.php';
 
 <!-- JavaScript principal -->
 <script src="scripts/manage.js"></script>
+<?php include 'modals/modal-edicion.php'; ?>
+<script src="scripts/inline-edicion.js"></script>
 
 <?php include '../../components/footer.php'; ?>

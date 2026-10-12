@@ -84,12 +84,7 @@ function showCopyNotification(msg = '¡Copiado!') {
 // Utilidad para crear un span clickeable que copia el texto
 function buildCopyableSpan(text, tooltip = 'Copiar', notification = '¡Copiado!') {
 	const safeText = (text || '').toString();
-	return `<span class="copyable-text" style="cursor:pointer;user-select:all;" title="${tooltip}"
-		onclick="navigator.clipboard.writeText('${safeText.replace(
-			/'/g,
-			"\\'"
-		)}').then(() => { if (typeof showCopyNotification === 'function') showCopyNotification('${notification}'); })"
-	>${safeText}</span>`;
+	return `<span class="copyable-text btn-copy-field" style="cursor:pointer;user-select:all;" title="${escapeAttribute(tooltip)}" data-value="${escapeAttribute(safeText)}">${escapeHtml(safeText)}</span>`;
 }
 
 const DETAIL_SECTIONS = [
@@ -271,7 +266,7 @@ const ESTADO_VISUAL_CONFIG = {
 };
 
 function escapeAttribute(value) {
-	return (value || '').toString().replace(/"/g, '&quot;');
+	return escapeHtml(value);
 }
 
 function escapeHtml(value) {
@@ -625,6 +620,7 @@ function renderEmpresasTable(data) {
 			empresaStatusCache[row.id] = row.detalleEstados;
 		}
 		const tr = document.createElement('tr');
+		tr.dataset.empresaId = row.id;
 
 		// Helper para saber si mostrar una columna
 		function colVisible(key) {
@@ -1127,6 +1123,8 @@ function setupTableEventListeners() {
  */
 function handleModalClick(target, empresa) {
 	const modalTarget = target.dataset.bsTarget;
+	const modalElement = document.querySelector(modalTarget);
+	if (modalElement) modalElement.dataset.empresaId = empresa.id;
 
 	let detallePromise = null;
 	// Evitar precarga si el modal es Documentos permanentes para no duplicar peticiones

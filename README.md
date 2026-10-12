@@ -50,6 +50,19 @@ El archivo `.env` contiene las credenciales locales y está excluido de Git. Par
 - Notificaciones glass accesibles con estados de éxito, información, advertencia y error, temporizador, pausa al interactuar y cierre manual.
 - Diálogos de confirmación personalizados para acciones destructivas.
 
+## Edición para administradores
+
+- Los administradores ven un único lápiz de edición general por registro, junto a Copiar en la columna de acciones de cuentas bancarias y accesos de bancos, SAT e iofacturo. Los campos individuales no muestran lápices.
+- En la columna de razón social aparecen Copiar y un lápiz para editar los datos generales de la empresa.
+- Edición de razón social, RFC, teléfono, correo, sitio web, dirección y régimen fiscal.
+- El lápiz abre un formulario en el modal actual; **Guardar** actualiza el registro y refresca la tabla y la caché. **Cancelar** descarta la edición. Los nuevos registros se agregan con los formularios existentes.
+- Edición de cuentas bancarias (banco, número, CLABE, moneda) y accesos bancarios (usuario, contraseña, clave de operación y NIP), SAT e iofacturo.
+- Los campos protegidos vacíos conservan el valor existente; los nuevos valores usan el cifrado compatible con los módulos actuales. La API no devuelve secretos al navegador.
+- API exclusiva para `Admin`, consultas preparadas, validaciones de servidor, transacciones y comprobación de pertenencia del registro a la empresa. No requiere migraciones.
+- Archivos: `pages/business/scripts/inline-edicion.js`, `pages/business/modals/modal-edicion.php`, `api/routes/apiEdicion.php` y `api/controllers/adminEdicion.php`.
+
+Se verificaron sintaxis PHP/JavaScript, roles (401/403/200), guardado con registros temporales, compatibilidad del cifrado, conservación de contraseñas, validaciones y rechazo de registros de otra empresa. También se verificó el frontend en un navegador sin interfaz gráfica con datos simulados: visibilidad de lápices, envío, actualización de tabla, errores y cancelación. Los registros temporales se eliminaron al finalizar. No se realizó una revisión visual de la aplicación completa.
+
 ## Base de datos
 
 La migración `database/migrations/001_security.sql` amplía el campo de contraseña, crea la tabla de recuperación heredada y agrega el índice de intentos de acceso. Esta migración ya fue aplicada a la base local `am_dev`.
@@ -58,6 +71,6 @@ La migración `database/migrations/001_security.sql` amplía el campo de contras
 
 Antes de publicar fuera de localhost se deben reemplazar `JWT_SECRET`, las credenciales SMTP, la clave de n8n y la conexión secundaria S14. Los archivos de `Documentos` contienen información sensible y deben quedar detrás de autenticación en una fase de endurecimiento para producción.
 
-## Verificación
+## Verificación de la modernización inicial
 
 Por solicitud del propietario no se ejecutaron suites de pruebas ni pruebas funcionales. La implementación se realizó conservando los contratos existentes y mediante revisión estática del código y del esquema.

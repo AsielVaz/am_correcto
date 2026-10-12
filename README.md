@@ -1,76 +1,125 @@
-# Sistema AM modernizado
+# Sistema administrativo
 
-Aplicación administrativa PHP compatible con los módulos del sistema `dev`: autenticación, roles, usuarios, empresas, información fiscal y bancaria, documentos, notificaciones, proyectos, servicios y tareas.
+Aplicación web desarrollada con PHP, MySQL y JavaScript para gestionar registros, datos de contacto, información fiscal y bancaria, documentos y usuarios. La interfaz utiliza tablas, búsquedas y formularios en ventanas modales.
 
-## Acceso
+## Requisitos
 
-- Producción: `https://codigoychips.com/am-cr/`
-- PHP: 8.2 o superior
-- Base de datos: MySQL `am_dev`
-- Configuración local: `.env`
+- PHP 8.2 o superior.
+- MySQL y extensión `mysqli`.
+- Extensiones de PHP `json`, `mbstring` y `openssl` para procesamiento de datos y cifrado.
+- Servidor web con soporte para PHP. En Apache, conservar el archivo `.htaccess` y permitir su aplicación.
+- Navegador con JavaScript habilitado.
 
-El archivo `.env` contiene las credenciales locales y está excluido de Git. Para otra instalación se debe copiar `.env.example` como `.env` y completar las variables.
+## Configuración
 
-## Publicación en producción
+Copiar `.env.example` como `.env` y ajustar las variables para la instalación. El archivo `.env` está excluido de Git y contiene la configuración privada.
 
-- Copiar el contenido de este directorio directamente al directorio público `am-cr`; no crear una carpeta `new` dentro de él.
-- La aplicación debe quedar accesible en `https://codigoychips.com/am-cr/` y `APP_URL` debe conservar ese mismo valor.
-- Como `.env` está excluido de Git, debe crearse o copiarse manualmente en la raíz de `am-cr` con las credenciales reales del servidor.
-- Como `Documentos` está excluido de Git, sus ZIP deben extraerse en la raíz de `am-cr`, de modo que exista `am-cr/Documentos`.
-- El archivo `.htaccess` debe subirse junto con el resto del contenido para proteger secretos y desactivar la ejecución de PHP dentro de archivos cargados.
+| Variables | Función |
+| --- | --- |
+| `APP_ENV`, `APP_DEBUG` | Entorno y visualización de errores. |
+| `APP_URL` | URL base de la instalación, incluyendo el subdirectorio cuando corresponda. |
+| `APP_TIMEZONE` | Zona horaria utilizada por PHP. |
+| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_CHARSET` | Conexión a la base de datos principal. |
+| `JWT_SECRET`, `JWT_TTL` | Firma y duración de los tokens de sesión; la clave debe tener al menos 32 caracteres. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_EMAIL`, `SMTP_PASSWORD`, `SMTP_FROM_NAME` | Envío de correo. |
+| `N8N_API_KEY` | Clave para la integración con n8n. |
+| `S14_DB_HOST`, `S14_DB_PORT`, `S14_DB_DATABASE`, `S14_DB_USERNAME`, `S14_DB_PASSWORD` | Conexión secundaria para los módulos que la utilizan. |
+
+El archivo `bootstrap.php` carga estas variables y configura la zona horaria y las cabeceras generales. Las funciones de `utils/routes.php` generan las rutas a páginas y recursos; si no se configura `APP_URL`, calculan el prefijo desde la petición actual.
+
+## Inicio de sesión y permisos
+
+La página inicial redirige al formulario de acceso. Al ingresar credenciales válidas, el servidor genera un token JWT que identifica al usuario y su rol. El navegador guarda la sesión en `sessionStorage` y agrega el token a las solicitudes dirigidas a la API mediante la cabecera `Authorization: Bearer`.
+
+La sesión se cierra cuando vence el token o el servidor devuelve una respuesta `401`. Una respuesta `403` indica falta de permisos. El menú **Cuenta** permite volver a la administración principal, acceder a la gestión de usuarios cuando el rol lo permite y cerrar sesión.
+
+| Rol | Funcionamiento |
+| --- | --- |
+| `Usuario` | Consulta de información; la vista principal adapta las columnas según el departamento. |
+| `Capturista` | Consulta y operaciones de captura autorizadas en los formularios existentes. |
+| `Admin` | Captura, administración de usuarios y edición general mediante el botón de acciones. |
+
+La interfaz utiliza `assets/js/permissions.js` para ocultar o deshabilitar controles según el rol. Las rutas que utilizan `api/utils/auth_guard.php` también validan autenticación y permisos en el servidor.
+
+Las contraseñas de inicio de sesión se almacenan mediante `password_hash`. Los hashes SHA-1 heredados se convierten al formato actual cuando se inicia sesión correctamente.
+
+## Consulta de registros
+
+La pantalla principal presenta información en una tabla con búsqueda y paginación. Los datos básicos se cargan desde la API; las secciones relacionadas se consultan al abrir sus modales y se almacenan temporalmente en una caché del navegador.
+
+Los iconos de estado permiten distinguir información completada, sin datos, urgente, en revisión, rechazada, postergada o con archivos faltantes. Los estados dependen de los valores registrados, los periodos de actualización y la información de cada sección.
+
+Los controles de copiar permiten obtener un dato individual o una fila completa. Las notificaciones indican el resultado de las operaciones y los formularios muestran errores de validación o de conexión.
+
+## Captura y edición
+
+Los formularios existentes permiten registrar datos de contacto, dirección, sitio web, información fiscal, cuentas bancarias y credenciales. Las operaciones disponibles dependen del rol y de la sección abierta.
+
+Para `Admin`, los modales de cuentas bancarias y accesos de bancos, SAT e iofacturo muestran un único lápiz de edición general por registro en la columna **Acciones**, junto a Copiar. Los campos individuales no muestran lápices. En la columna de razón social también está disponible la edición de datos generales.
+
+El flujo de edición funciona así:
+
+1. Seleccionar el lápiz del registro.
+2. Modificar los datos en el formulario.
+3. Pulsar **Guardar** para enviar los cambios al servidor.
+4. El servidor valida los valores y la relación del registro con su registro principal, y guarda dentro de una transacción.
+5. La interfaz refresca la tabla y la caché para mostrar los valores actualizados.
+
+**Cancelar** descarta lo escrito. Si falla el guardado, el formulario conserva los valores para reintentar. Al cerrar con cambios pendientes se solicita confirmar su descarte.
+
+La edición incluye banco, número de cuenta, CLABE, moneda, usuarios y credenciales. Los campos protegidos se presentan vacíos: escribir un nuevo valor reemplaza el existente y dejarlos vacíos lo conserva. Las nuevas credenciales se cifran con el formato utilizado por los módulos actuales.
+
+La API de edición no devuelve contraseñas ni valores cifrados al formulario. Exige el rol `Admin`, utiliza consultas preparadas y comprueba que el registro editado corresponda al contexto seleccionado. Los cambios de razón social mantienen la relación bancaria heredada; se rechazan coincidencias ambiguas con otros registros.
+
+## Documentos y periodos
+
+Las secciones documentales permiten cargar, consultar, descargar y gestionar archivos según los controles disponibles. Incluyen documentación permanente, comprobantes, constancias, opiniones de cumplimiento, archivos fiscales, estados de cuenta y carátulas bancarias.
+
+Los archivos se almacenan en `Documentos` e `Imagenes`. La interfaz resuelve sus rutas respecto a la instalación y señala los documentos referenciados que no se encuentran en el almacenamiento.
+
+Los periodos de actualización y las postergaciones se utilizan para calcular estados y necesidades de revisión. Al modificar teléfono, correo o sitio web mediante la API de edición, se actualiza su periodo y se eliminan las postergaciones del campo correspondiente.
 
 ## Arquitectura
 
-- `bootstrap.php`: carga de entorno, zona horaria, cabeceras de seguridad y utilidades de rutas físicas.
-- `api/config/conectorBD.php`: conexión MySQL reutilizable, `utf8mb4`, errores controlados y soporte de consultas preparadas.
-- `api/controllers`: acceso a datos y lógica heredada.
-- `api/routes`: contratos HTTP compatibles con el frontend anterior.
-- `api/utils`: autenticación, JWT, correo y utilidades compartidas.
-- `pages`: interfaz de empresas, usuarios y autenticación.
-- `assets`: estilos, JavaScript, fuentes e imágenes.
-- `database/migrations`: cambios de esquema necesarios para las mejoras de seguridad.
-- `Documentos`: unión local hacia `../dev/Documentos`; evita duplicar 3.1 GB y conserva todos los archivos existentes.
+| Ruta | Responsabilidad |
+| --- | --- |
+| `index.php` | Entrada y redirección al acceso. |
+| `bootstrap.php` | Configuración compartida. |
+| `utils/routes.php` | Construcción de URLs. |
+| `components` | Estructura visual compartida y menú de cuenta. |
+| `pages/auth` | Inicio y cierre de sesión. |
+| `pages/business` | Tabla principal, modales y scripts de gestión. |
+| `pages/users` | Administración de usuarios. |
+| `assets` | Estilos, iconos y JavaScript compartido. |
+| `api/routes` | Puntos de entrada HTTP. |
+| `api/controllers` | Acceso a datos y lógica de gestión. |
+| `api/config/conectorBD.php` | Conexión MySQL, consultas preparadas y transacciones. |
+| `api/utils` | Autenticación, cifrado y utilidades. |
+| `database/migrations` | Cambios de esquema. |
 
-## Mejoras incorporadas
+La edición general se implementa en `pages/business/scripts/inline-edicion.js` y `pages/business/modals/modal-edicion.php`. Las solicitudes se procesan mediante `api/routes/apiEdicion.php` y `api/controllers/adminEdicion.php`.
 
-- Configuración y secretos fuera del código fuente mediante variables de entorno.
-- Conexión centralizada y persistente durante cada petición.
-- Consultas preparadas en autenticación, usuarios y control de intentos.
-- Contraseñas con `password_hash`; los hashes SHA-1 existentes se migran automáticamente al iniciar sesión correctamente.
-- JWT HS256 con codificación base64url, `iat`, `nbf`, `exp`, `jti` y validación de firma en tiempo constante.
-- Roles `Usuario`, `Capturista` y `Admin` conservados.
-- Sesión del frontend en `sessionStorage`, migración transparente desde el almacenamiento anterior y cierre únicamente ante respuestas 401.
-- Cabeceras HTTP de seguridad, bloqueo de listados y bloqueo de ejecución PHP en carpetas de archivos.
-- Rutas configuradas para `/am-cr` y autodetección del prefijo cuando `APP_URL` no está disponible.
-- Resolución automática de URLs heredadas de `Documentos` e `Imagenes`.
-- Cargas apuntando al directorio de la aplicación, nombres saneados con `basename` y permisos de archivo restringidos.
-- Procesos programados y correo configurables desde `.env`.
-- Interfaz glassmorphism responsive para tarjetas, tablas, formularios, navegación, menús y modales, con variantes clara y oscura.
-- Animaciones de entrada, transición de modales, fondos ambientales y efecto ripple; se desactivan automáticamente cuando el sistema solicita reducir movimiento.
-- Notificaciones glass accesibles con estados de éxito, información, advertencia y error, temporizador, pausa al interactuar y cierre manual.
-- Diálogos de confirmación personalizados para acciones destructivas.
+## API de edición
 
-## Edición para administradores
+`api/routes/apiEdicion.php` acepta solicitudes autenticadas de administradores y devuelve JSON con cabeceras que impiden almacenar la respuesta en caché.
 
-- Los administradores ven un único lápiz de edición general por registro, junto a Copiar en la columna de acciones de cuentas bancarias y accesos de bancos, SAT e iofacturo. Los campos individuales no muestran lápices.
-- En la columna de razón social aparecen Copiar y un lápiz para editar los datos generales de la empresa.
-- Edición de razón social, RFC, teléfono, correo, sitio web, dirección y régimen fiscal.
-- El lápiz abre un formulario en el modal actual; **Guardar** actualiza el registro y refresca la tabla y la caché. **Cancelar** descarta la edición. Los nuevos registros se agregan con los formularios existentes.
-- Edición de cuentas bancarias (banco, número, CLABE, moneda) y accesos bancarios (usuario, contraseña, clave de operación y NIP), SAT e iofacturo.
-- Los campos protegidos vacíos conservan el valor existente; los nuevos valores usan el cifrado compatible con los módulos actuales. La API no devuelve secretos al navegador.
-- API exclusiva para `Admin`, consultas preparadas, validaciones de servidor, transacciones y comprobación de pertenencia del registro a la empresa. No requiere migraciones.
-- Archivos: `pages/business/scripts/inline-edicion.js`, `pages/business/modals/modal-edicion.php`, `api/routes/apiEdicion.php` y `api/controllers/adminEdicion.php`.
+- `GET`: búsqueda paginada o consulta de datos editables del contexto seleccionado.
+- `POST`: actualización del registro indicado mediante su contexto, tipo, identificador y campos editados.
+- Otros métodos: respuesta `405`.
 
-Se verificaron sintaxis PHP/JavaScript, roles (401/403/200), guardado con registros temporales, compatibilidad del cifrado, conservación de contraseñas, validaciones y rechazo de registros de otra empresa. También se verificó el frontend en un navegador sin interfaz gráfica con datos simulados: visibilidad de lápices, envío, actualización de tabla, errores y cancelación. Los registros temporales se eliminaron al finalizar. No se realizó una revisión visual de la aplicación completa.
+| Código HTTP | Significado |
+| --- | --- |
+| `200` | Operación completada. |
+| `401` | Token ausente, inválido o vencido. |
+| `403` | Rol sin autorización. |
+| `404` | Registro inexistente o ajeno al contexto seleccionado. |
+| `422` | Datos de edición inválidos. |
+| `500` | Error al completar la operación. |
 
-## Base de datos
+## Instalación y mantenimiento
 
-La migración `database/migrations/001_security.sql` amplía el campo de contraseña, crea la tabla de recuperación heredada y agrega el índice de intentos de acceso. Esta migración ya fue aplicada a la base local `am_dev`.
+Publicar los archivos de la aplicación en el directorio elegido, configurar `.env` y ajustar `APP_URL` a esa ubicación. La base de datos debe contar con el esquema de los módulos y las migraciones correspondientes; `database/migrations/001_security.sql` contiene ajustes para autenticación y control de intentos, no el esquema completo.
 
-## Seguridad operativa
+Conservar el almacenamiento de documentos y las reglas de `.htaccess` al actualizar la aplicación. Usar credenciales propias para cada entorno y mantener `APP_DEBUG=false` cuando no se deban mostrar errores al navegador.
 
-Antes de publicar fuera de localhost se deben reemplazar `JWT_SECRET`, las credenciales SMTP, la clave de n8n y la conexión secundaria S14. Los archivos de `Documentos` contienen información sensible y deben quedar detrás de autenticación en una fase de endurecimiento para producción.
-
-## Verificación de la modernización inicial
-
-Por solicitud del propietario no se ejecutaron suites de pruebas ni pruebas funcionales. La implementación se realizó conservando los contratos existentes y mediante revisión estática del código y del esquema.
+Los scripts `api/script_*.php` contienen procesos de actualización, validación y notificación. Su ejecución depende de la configuración externa del servidor; la aplicación no instala automáticamente un programador de tareas.
